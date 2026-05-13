@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Fruit Seas Online</title>
+  <style>
+    :root {
+      --bg: #061323;
+      --panel: rgba(7, 16, 32, .78);
+      --panel2: rgba(10, 30, 58, .76);
+      --txt: #eef7ff;
+      --muted: #9ec4dc;
+      --accent: #70e1ff;
+      --good: #7cff9e;
+      --danger: #ff5473;
+      --gold: #ffd166;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: none; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--txt); font-family: Inter, system-ui, Segoe UI, Arial, sans-serif; }
+    canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; background: #061323; }
+    button, input, select { font: inherit; }
+    .screen { position: fixed; inset: 0; display: grid; place-items: center; padding: 18px; background: radial-gradient(circle at top left, rgba(70,225,255,.22), transparent 42%), radial-gradient(circle at bottom right, rgba(255,84,115,.18), transparent 45%), rgba(3, 8, 18, .84); z-index: 20; }
+    .hidden { display: none !important; }
+    .card { width: min(860px, 96vw); max-height: 92vh; overflow: auto; border: 1px solid rgba(255,255,255,.16); border-radius: 26px; padding: 22px; background: linear-gradient(160deg, rgba(11, 25, 48, .92), rgba(8, 17, 32, .86)); box-shadow: 0 24px 80px rgba(0,0,0,.45), inset 0 0 30px rgba(112,225,255,.08); }
+    .title { margin: 0 0 6px; font-size: clamp(30px, 7vw, 64px); letter-spacing: -.06em; line-height: .94; }
+    .subtitle { margin: 0 0 18px; color: var(--muted); font-size: 15px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .col { display: grid; gap: 10px; }
+    input { min-width: 180px; flex: 1; border: 1px solid rgba(255,255,255,.15); border-radius: 16px; padding: 13px 14px; background: rgba(0,0,0,.22); color: var(--txt); outline: none; text-transform: none; }
+    input.code { text-transform: uppercase; letter-spacing: .2em; font-weight: 800; max-width: 180px; }
+    .btn { border: 0; border-radius: 16px; padding: 13px 16px; color: #03111f; background: linear-gradient(135deg, #6be8ff, #8dffb0); font-weight: 900; cursor: pointer; box-shadow: 0 10px 24px rgba(112,225,255,.22); }
+    .btn.secondary { color: var(--txt); background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.13); box-shadow: none; }
+    .btn.danger { color: white; background: linear-gradient(135deg, #ff5473, #ff9e68); }
+    .pill { display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; padding: 7px 11px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.12); color: var(--muted); font-size: 13px; }
+    .fruit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 12px; }
+    .fruit { border: 1px solid rgba(255,255,255,.14); border-radius: 18px; padding: 12px; background: rgba(255,255,255,.07); color: var(--txt); text-align: left; cursor: pointer; min-height: 76px; }
+    .fruit strong { display: block; font-size: 16px; }
+    .fruit span { display: block; color: var(--muted); font-size: 12px; margin-top: 3px; }
+    .fruit.selected { outline: 2px solid var(--accent); background: rgba(112,225,255,.16); }
+    #hud { position: fixed; left: max(12px, env(safe-area-inset-left)); top: max(10px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); z-index: 8; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; pointer-events: none; }
+    .hud-card { pointer-events: none; min-width: 220px; max-width: min(460px, 62vw); border: 1px solid rgba(255,255,255,.14); border-radius: 18px; padding: 10px 12px; background: var(--panel); backdrop-filter: blur(14px); box-shadow: 0 12px 28px rgba(0,0,0,.25); }
+    .hud-card b { color: white; }
+    .bar { height: 10px; border-radius: 999px; background: rgba(255,255,255,.12); overflow: hidden; margin: 6px 0; }
+    .bar > i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, #72ff9b, #ffe66d); border-radius: inherit; }
+    .bar.hp > i { background: linear-gradient(90deg, #ff5473, #ffbc70); }
+    .bar.fury > i { background: linear-gradient(90deg, #4cff89, #ff6b3d); }
+    #notice { pointer-events: none; position: fixed; left: 50%; top: 72px; transform: translateX(-50%); z-index: 13; max-width: min(620px, 90vw); padding: 12px 16px; border-radius: 18px; background: rgba(0,0,0,.62); border: 1px solid rgba(255,255,255,.18); color: white; text-align: center; opacity: 0; transition: opacity .2s ease; }
+    #notice.show { opacity: 1; }
+    #controls { position: fixed; inset: 0; z-index: 9; pointer-events: none; }
+    #joy { position: absolute; left: max(26px, env(safe-area-inset-left)); bottom: max(28px, env(safe-area-inset-bottom)); width: 142px; height: 142px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.14), rgba(255,255,255,.05)); border: 1px solid rgba(255,255,255,.16); box-shadow: inset 0 0 24px rgba(112,225,255,.12); pointer-events: auto; }
+    #knob { position: absolute; left: 43px; top: 43px; width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, rgba(112,225,255,.9), rgba(139,255,176,.88)); box-shadow: 0 8px 20px rgba(0,0,0,.34); }
+    #skills { position: absolute; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(4, 58px); grid-template-rows: repeat(2, 58px); gap: 10px; pointer-events: auto; align-items: end; }
+    .skill { position: relative; border: 1px solid rgba(255,255,255,.16); border-radius: 18px; background: rgba(255,255,255,.12); color: white; font-weight: 1000; box-shadow: 0 10px 22px rgba(0,0,0,.28), inset 0 0 18px rgba(255,255,255,.07); backdrop-filter: blur(12px); }
+    .skill:active { transform: scale(.96); }
+    .skill.m1 { grid-column: 3 / span 2; grid-row: 1 / span 2; width: 126px; height: 126px; border-radius: 34px; font-size: 24px; background: linear-gradient(135deg, rgba(255,209,102,.95), rgba(255,111,145,.9)); color: #16080c; }
+    .skill small { position: absolute; left: 50%; bottom: 5px; transform: translateX(-50%); font-size: 10px; color: rgba(255,255,255,.8); }
+    #floatButtons { position: fixed; right: max(14px, env(safe-area-inset-right)); top: max(86px, env(safe-area-inset-top)); z-index: 10; display: flex; gap: 8px; flex-direction: column; pointer-events: auto; }
+    #floatButtons .mini { border: 1px solid rgba(255,255,255,.16); background: rgba(5,14,26,.72); color: var(--txt); border-radius: 14px; padding: 10px 11px; backdrop-filter: blur(14px); font-weight: 800; }
+    #roomBadge { font-size: 28px; letter-spacing: .16em; color: var(--gold); font-weight: 1000; }
+    #playersList { display: grid; gap: 8px; margin: 12px 0; }
+    .player-line { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); }
+    #rotateHint { position: fixed; inset: 0; display: none; place-items: center; padding: 24px; background: #050b15; z-index: 80; text-align: center; }
+    @media (orientation: portrait) and (max-width: 900px) { #rotateHint { display: grid; } }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <section id="menu" class="screen">
+    <div class="card">
+      <h1 class="title">Fruit Seas Online</h1>
+      <p class="subtitle">Arena de ilhas, frutas, missões e salas online para até 4 jogadores. Tudo desenhado em Canvas, sem assets externos.</p>
+      <div class="row">
+        <input id="name" maxlength="16" placeholder="Seu nome" autocomplete="off" />
+        <input id="joinCode" class="code" maxlength="6" placeholder="CÓDIGO" autocomplete="off" />
+        <button id="createBtn" class="btn">Criar sala</button>
+        <button id="joinBtn" class="btn secondary">Entrar</button>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <span class="pill">👥 Até 4 jogadores</span>
+        <span class="pill">🔐 Código de 6 letras</span>
+        <span class="pill">📱 Landscape mobile</span>
+        <span class="pill">🌐 WebSocket + Worker</span>
+      </div>
+      <h3>Fruta inicial</h3>
+      <div id="fruitGrid" class="fruit-grid"></div>
+      <p id="menuStatus" class="subtitle"></p>
+    </div>
+  </section>
+
+  <section id="lobby" class="screen hidden">
+    <div class="card">
+      <h2 style="margin:0 0 4px">Sala criada</h2>
+      <p class="subtitle">Compartilhe este código com seus amigos. O dono pode começar mesmo sozinho.</p>
+      <div id="roomBadge">------</div>
+      <div id="playersList"></div>
+      <div class="row">
+        <button id="startBtn" class="btn">Começar aventura</button>
+        <button id="copyBtn" class="btn secondary">Copiar código</button>
+        <button id="leaveBtn" class="btn danger">Sair</button>
+      </div>
+      <p class="subtitle">Dica: toque em “Modo imersivo” dentro do jogo para tela cheia e landscape.</p>
+    </div>
+  </section>
+
+  <div id="hud" class="hidden">
+    <div class="hud-card">
+      <div><b id="hudName">Jogador</b> <span id="hudFruit" class="pill">Gás</span></div>
+      <div class="bar hp"><i id="hpBar"></i></div>
+      <div id="hpText" class="subtitle" style="margin:0">HP</div>
+      <div class="bar"><i id="xpBar"></i></div>
+      <div id="lvText" class="subtitle" style="margin:0">LVL</div>
+      <div class="bar fury"><i id="furyBar"></i></div>
+      <div id="missionText" class="subtitle" style="margin:0">Sem missão</div>
+    </div>
+    <div class="hud-card" style="min-width:170px; text-align:right">
+      <b id="islandText">Ilha</b><br />
+      <span id="moneyText" class="subtitle">$0</span><br />
+      <span id="roomText" class="pill">------</span>
+    </div>
+  </div>
+
+  <div id="notice"></div>
+
+  <div id="controls" class="hidden">
+    <div id="joy"><div id="knob"></div></div>
+    <div id="skills">
+      <button class="skill" data-skill="z">Z<small id="cdZ"></small></button>
+      <button class="skill" data-skill="x">X<small id="cdX"></small></button>
+      <button class="skill" data-skill="c">C<small id="cdC"></small></button>
+      <button class="skill" data-skill="v">V<small id="cdV"></small></button>
+      <button class="skill m1" data-skill="m1">M1<small id="cdM1"></small></button>
+    </div>
+  </div>
+
+  <div id="floatButtons" class="hidden">
+    <button id="immersiveBtn" class="mini">⛶ Modo imersivo</button>
+    <button id="missionBtn" class="mini">📜 Missão</button>
+    <button id="fruitMenuBtn" class="mini">🍇 Frutas</button>
+    <button id="respawnBtn" class="mini hidden">✨ Reviver</button>
+  </div>
+
+  <section id="fruitModal" class="screen hidden" style="z-index:40; background:rgba(2,8,18,.74)">
+    <div class="card">
+      <h2 style="margin-top:0">Escolha sua fruta</h2>
+      <p class="subtitle">Pode trocar a qualquer momento. O servidor limpa transformação e cooldowns para evitar bug de estado.</p>
+      <div id="fruitGridGame" class="fruit-grid"></div>
+      <button id="closeFruit" class="btn secondary" style="margin-top:12px">Fechar</button>
+    </div>
+  </section>
+
+  <div id="rotateHint">
+    <div>
+      <h2>Vire o celular para jogar 🌊</h2>
+      <p>Este protótipo foi feito para landscape. No botão de modo imersivo ele tenta travar a orientação automaticamente.</p>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const menu = document.getElementById('menu');
+  const lobby = document.getElementById('lobby');
+  const hud = document.getElementById('hud');
+  const controls = document.getElementById('controls');
+  const floatButtons = document.getElementById('floatButtons');
+  const fruitGrid = document.getElementById('fruitGrid');
+  const fruitGridGame = document.getElementById('fruitGridGame');
+  const menuStatus = document.getElementById('menuStatus');
+  const nameInput = document.getElementById('name');
+  const joinCode = document.getElementById('joinCode');
+  const roomBadge = document.getElementById('roomBadge');
+  const playersList = document.getElementById('playersList');
+  const startBtn = document.getElementById('startBtn');
+  const fruitModal = document.getElementById('fruitModal');
+  const notice = document.getElementById('notice');
+
+  const FRUITS = [
+    { key:'gas', name:'Gás', aura:'nuvens rosas/magenta', color:'#ff5ac8' },
+    { key:'dragon', name:'Dragon', aura:'asas verdes + fúria', color:'#40ff87' },
+    { key:'control', name:'Control', aura:'quadrados azuis', color:'#64dcff' },
+    { key:'venom', name:'Venom', aura:'gotas roxo-avermelhadas', color:'#a647ff' },
+    { key:'kitsune', name:'Kitsune', aura:'caudas azul-roxo', color:'#7197ff' },
+    { key:'luz', name:'Luz', aura:'velocidade e raios', color:'#ffe56a' },
+    { key:'gelo', name:'Gelo', aura:'controle e defesa', color:'#9ee8ff' },
+    { key:'bomba', name:'Bomba', aura:'explosões em área', color:'#ff7b3a' },
+    { key:'sombra', name:'Sombra', aura:'cortes e teleporte', color:'#6c5cff' },
+    { key:'fenix', name:'Fênix', aura:'cura e fogo', color:'#ff9b46' }
+  ];
+
+  const themeColor = {
+    verdejante: ['#66d17a', '#2f915c'],
+    fungica: ['#d76eff', '#8340b8'],
+    persa: ['#e8bc6a', '#b6783e'],
+    magmatica: ['#a94b34', '#4d1b24'],
+    celeste: ['#a7eaff', '#6f8dff']
+  };
+
+  let ws = null;
+  let state = null;
+  let localId = null;
+  let selectedFruit = 'gas';
+  let roomCode = '';
+  let joy = { x:0, y:0, active:false, id:null };
+  let aim = { x:1, y:0 };
+  let lastNoticeAt = 0;
+  let dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  let m1DownAt = 0;
+
+  function resize() {
+    dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    canvas.width = Math.floor(innerWidth * dpr);
+    canvas.height = Math.floor(innerHeight * dpr);
+    canvas.style.width = innerWidth + 'px';
+    canvas.style.height = innerHeight + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  addEventListener('resize', resize);
+  resize();
+
+  function fruitCard(f) {
+    const b = document.createElement('button');
+    b.className = 'fruit' + (selectedFruit === f.key ? ' selected' : '');
+    b.innerHTML = `<strong style="color:${f.color}">🍇 ${f.name}</strong><span>${f.aura}</span>`;
+    b.addEventListener('pointerdown', (ev) => {
+      ev.preventDefault();
+      selectedFruit = f.key;
+      renderFruitGrids();
+      if (ws && localId) send({ type:'fruit', fruit:f.key });
+    });
+    return b;
+  }
+
+  function renderFruitGrids() {
+    fruitGrid.innerHTML = '';
+    fruitGridGame.innerHTML = '';
+    for (const f of FRUITS) {
+      fruitGrid.appendChild(fruitCard(f));
+      fruitGridGame.appendChild(fruitCard(f));
+    }
+  }
+  renderFruitGrids();
+
+  function show(el) { el.classList.remove('hidden'); }
+  function hide(el) { el.classList.add('hidden'); }
+  function setStatus(txt) { menuStatus.textContent = txt || ''; }
+
+  document.getElementById('createBtn').addEventListener('click', async () => {
+    try {
+      setStatus('Criando sala...');
+      const res = await fetch('/api/create', { method:'POST' });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'Falha ao criar sala.');
+      connect(data.code);
+    } catch (err) { setStatus('Erro: ' + err.message); }
+  });
+
+  document.getElementById('joinBtn').addEventListener('click', () => {
+    const code = joinCode.value.trim().toUpperCase();
+    if (!/^[A-Z]{6}$/.test(code)) return setStatus('Digite um código de 6 letras.');
+    connect(code);
+  });
+
+  document.getElementById('leaveBtn').addEventListener('click', () => location.reload());
+  document.getElementById('copyBtn').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(roomCode); toast('Código copiado!'); } catch { toast('Código: ' + roomCode); }
+  });
+  startBtn.addEventListener('click', () => send({ type:'start' }));
+  document.getElementById('missionBtn').addEventListener('click', () => send({ type:'mission' }));
+  document.getElementById('respawnBtn').addEventListener('click', () => send({ type:'respawn' }));
+  document.getElementById('fruitMenuBtn').addEventListener('click', () => show(fruitModal));
+  document.getElementById('closeFruit').addEventListener('click', () => hide(fruitModal));
+  document.getElementById('immersiveBtn').addEventListener('click', immersive);
+
+  async function immersive() {
+    try {
+      if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+      if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape').catch(() => {});
+      toast('Modo imersivo ativado.');
+    } catch {
+      toast('Seu navegador bloqueou o fullscreen/orientação. Toque de novo ou permita no navegador.');
+    }
+  }
+
+  function connect(code) {
+    if (ws) ws.close();
+    roomCode = code.toUpperCase();
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${protocol}//${location.host}/ws/${roomCode}`);
+    setStatus('Conectando na sala ' + roomCode + '...');
+    ws.addEventListener('open', () => {
+      send({ type:'join', name: nameInput.value || 'Kaio', fruit: selectedFruit });
+    });
+    ws.addEventListener('message', (ev) => handleMessage(JSON.parse(ev.data)));
+    ws.addEventListener('close', () => {
+      toast('Conexão encerrada.');
+      hide(hud); hide(controls); hide(floatButtons); show(menu); hide(lobby);
+    });
+    ws.addEventListener('error', () => setStatus('Falha no WebSocket. Confira o deploy do Worker.'));
+  }
+
+  function send(data) {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(data));
+  }
+
+  function handleMessage(msg) {
+    if (msg.type === 'joined') {
+      localId = msg.id;
+      roomCode = msg.code;
+      roomBadge.textContent = roomCode;
+      hide(menu); show(lobby);
+      setStatus('');
+      return;
+    }
+    if (msg.type === 'lobby') {
+      roomCode = msg.code || roomCode;
+      roomBadge.textContent = roomCode;
+      renderLobby(msg.players || []);
+      const me = (msg.players || []).find(p => p.id === localId);
+      startBtn.style.display = me?.owner ? 'inline-flex' : 'none';
+      if (msg.started) enterGame();
+      return;
+    }
+    if (msg.type === 'state') {
+      state = msg;
+      const me = myPlayer();
+      if (me && msg.started) enterGame();
+      updateHud();
+      return;
+    }
+    if (msg.type === 'notice') toast(msg.text);
+    if (msg.type === 'error') toast(msg.error || 'Erro na sala.');
+  }
+
+  function renderLobby(players) {
+    playersList.innerHTML = '';
+    for (const p of players) {
+      const f = FRUITS.find(x => x.key === p.fruit);
+      const div = document.createElement('div');
+      div.className = 'player-line';
+      div.innerHTML = `<span>${p.owner ? '👑 ' : '🧭 '}${escapeHtml(p.name)}</span><b style="color:${f?.color || '#fff'}">${f?.name || p.fruit}</b>`;
+      playersList.appendChild(div);
+    }
+  }
+
+  function enterGame() {
+    hide(menu); hide(lobby); show(hud); show(controls); show(floatButtons);
+  }
+
+  function myPlayer() {
+    return state?.players?.find(p => p.id === localId) || null;
+  }
+
+  function toast(text) {
+    if (!text) return;
+    notice.textContent = text;
+    notice.classList.add('show');
+    lastNoticeAt = performance.now();
+    setTimeout(() => {
+      if (performance.now() - lastNoticeAt >= 1800) notice.classList.remove('show');
+    }, 1900);
+  }
+
+  function updateHud() {
+    const me = myPlayer();
+    if (!me) return;
+    const fruit = FRUITS.find(f => f.key === me.fruit) || FRUITS[0];
+    document.getElementById('hudName').textContent = me.name;
+    document.getElementById('hudFruit').textContent = fruit.name + (me.transformed ? ' ✨' : '');
+    document.getElementById('hpBar').style.width = pct(me.hp, me.maxHp) + '%';
+    document.getElementById('hpText').textContent = `${Math.max(0, me.hp)}/${me.maxHp} HP`;
+    document.getElementById('xpBar').style.width = pct(me.xp, me.xpNeed) + '%';
+    document.getElementById('lvText').textContent = `LVL ${me.level} • XP ${me.xp}/${me.xpNeed}`;
+    document.getElementById('furyBar').style.width = (me.fruit === 'dragon' ? me.fury : 0) + '%';
+    const island = state.islands?.find(i => i.id === me.island);
+    document.getElementById('islandText').textContent = island?.name || 'Mar Aberto';
+    document.getElementById('moneyText').textContent = `$${me.money}`;
+    document.getElementById('roomText').textContent = state.code || roomCode;
+    document.getElementById('missionText').textContent = me.mission ? `Missão: ${me.mission.kills}/${me.mission.target}` : 'Sem missão ativa';
+    document.getElementById('respawnBtn').classList.toggle('hidden', me.alive || me.respawnIn > 0);
+    setCd('cdM1', me.cooldowns?.m1); setCd('cdZ', me.cooldowns?.z); setCd('cdX', me.cooldowns?.x); setCd('cdC', me.cooldowns?.c); setCd('cdV', me.cooldowns?.v);
+  }
+  function setCd(id, v) { document.getElementById(id).textContent = v > 0 ? v.toFixed(1) : ''; }
+  function pct(a,b) { return Math.max(0, Math.min(100, (a / Math.max(1,b)) * 100)); }
+
+  const joyBase = document.getElementById('joy');
+  const knob = document.getElementById('knob');
+  joyBase.addEventListener('pointerdown', ev => { joy.active = true; joy.id = ev.pointerId; joyBase.setPointerCapture(ev.pointerId); updateJoy(ev); });
+  joyBase.addEventListener('pointermove', ev => { if (joy.active && ev.pointerId === joy.id) updateJoy(ev); });
+  joyBase.addEventListener('pointerup', endJoy);
+  joyBase.addEventListener('pointercancel', endJoy);
+  function updateJoy(ev) {
+    const r = joyBase.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const dx = ev.clientX - cx, dy = ev.clientY - cy;
+    const max = r.width * .33;
+    const len = Math.min(max, Math.hypot(dx,dy));
+    const n = norm(dx,dy);
+    joy.x = n.x * (len / max); joy.y = n.y * (len / max);
+    knob.style.left = (43 + joy.x * max) + 'px';
+    knob.style.top = (43 + joy.y * max) + 'px';
+  }
+  function endJoy(ev) {
+    if (ev.pointerId !== joy.id) return;
+    joy.active = false; joy.x = 0; joy.y = 0;
+    knob.style.left = '43px'; knob.style.top = '43px';
+  }
+
+  document.querySelectorAll('.skill').forEach(btn => {
+    const key = btn.dataset.skill;
+    if (key === 'm1') {
+      btn.addEventListener('pointerdown', ev => {
+        ev.preventDefault();
+        m1DownAt = performance.now();
+        const me = myPlayer();
+        if (me?.fruit !== 'control') castSkill('m1', false);
+      });
+      btn.addEventListener('pointerup', ev => {
+        ev.preventDefault();
+        const me = myPlayer();
+        if (me?.fruit === 'control') castSkill('m1', performance.now() - m1DownAt >= 2900);
+      });
+      btn.addEventListener('pointercancel', ev => { ev.preventDefault(); });
+    } else {
+      btn.addEventListener('pointerdown', ev => { ev.preventDefault(); castSkill(key, false); });
+    }
+  });
+
+  function castSkill(key, held) {
+    const a = autoAim();
+    aim = a;
+    send({ type:'skill', key, aimX:a.x, aimY:a.y, held });
+  }
+
+  setInterval(() => {
+    const a = autoAim(false);
+    send({ type:'input', x: joy.x, y: joy.y, aimX: a.x, aimY: a.y });
+  }, 50);
+
+  function autoAim(preferEnemy = true) {
+    const me = myPlayer();
+    if (!me || !state) return aim;
+    let best = null, bestD = 999999;
+    const targets = [];
+    if (preferEnemy) targets.push(...(state.enemies || []).filter(e => e.alive && e.island === me.island));
+    targets.push(...(state.players || []).filter(p => p.alive && p.id !== me.id && p.island === me.island));
+    for (const t of targets) {
+      const d = Math.hypot(t.x - me.x, t.y - me.y);
+      if (d < bestD) { bestD = d; best = t; }
+    }
+    if (best) return norm(best.x - me.x, best.y - me.y);
+    return aim;
+  }
+
+  function draw() {
+    requestAnimationFrame(draw);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const w = innerWidth, h = innerHeight;
+    const g = ctx.createLinearGradient(0,0,w,h);
+    g.addColorStop(0, '#09213a'); g.addColorStop(1, '#020913');
+    ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+    drawWater(w,h);
+    if (!state) { drawStars(w,h); return; }
+    const me = myPlayer() || state.players?.[0] || { x: 600, y: 500 };
+    const camX = clamp(me.x - w/2, 0, Math.max(0, state.world.w - w));
+    const camY = clamp(me.y - h/2, 0, Math.max(0, state.world.h - h));
+    ctx.save();
+    ctx.translate(-camX, -camY);
+    drawWorldBounds(state.world.w, state.world.h);
+    for (const island of state.islands || []) drawIsland(island);
+    for (const z of state.zones || []) drawZone(z);
+    for (const e of state.enemies || []) drawEnemy(e);
+    for (const pr of state.projectiles || []) drawProjectile(pr);
+    for (const p of state.players || []) drawPlayer(p);
+    if (me.controlRoom) drawControlRoom(me.controlRoom);
+    ctx.restore();
+  }
+
+  function drawWater(w,h) {
+    ctx.save(); ctx.globalAlpha = .18; ctx.strokeStyle = '#7bdfff'; ctx.lineWidth = 1;
+    const t = performance.now() * .001;
+    for (let y = -20; y < h + 40; y += 52) {
+      ctx.beginPath();
+      for (let x = -20; x < w + 40; x += 30) {
+        const yy = y + Math.sin(x * .018 + t) * 5;
+        if (x === -20) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function drawStars(w,h) {
+    ctx.save(); ctx.globalAlpha = .8; ctx.textAlign = 'center'; ctx.fillStyle = '#dff9ff'; ctx.font = '800 32px system-ui'; ctx.fillText('Crie ou entre em uma sala para navegar', w/2, h/2); ctx.restore();
+  }
+  function drawWorldBounds(w,h) { ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.lineWidth = 12; ctx.strokeRect(0,0,w,h); ctx.restore(); }
+
+  function drawIsland(island) {
+    const colors = themeColor[island.theme] || ['#79d68d','#376d52'];
+    const grad = ctx.createRadialGradient(island.x - 90, island.y - 90, 40, island.x, island.y, island.r);
+    grad.addColorStop(0, colors[0]); grad.addColorStop(1, colors[1]);
+    ctx.save();
+    ctx.fillStyle = 'rgba(231,203,130,.9)'; ellipse(island.x, island.y + 10, island.r * 1.12, island.r * .78, true);
+    ctx.fillStyle = grad; ellipse(island.x, island.y, island.r, island.r * .68, true);
+    ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 4; ellipse(island.x, island.y, island.r, island.r * .68, false);
+    ctx.fillStyle = 'rgba(0,0,0,.2)'; ellipse(island.enemyX, island.enemyY, 145, 95, false);
+    ctx.setLineDash([10,8]); ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 2; ellipse(island.enemyX, island.enemyY, 190, 125, false); ctx.setLineDash([]);
+    drawNpc(island.npcX, island.npcY, island.name);
+    ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.font = '900 26px system-ui'; ctx.textAlign = 'center'; ctx.fillText(island.name, island.x, island.y - island.r * .48);
+    ctx.restore();
+  }
+  function drawNpc(x,y,label) {
+    ctx.save();
+    ctx.fillStyle = '#ffd166'; circle(x, y, 24, true);
+    ctx.fillStyle = '#132033'; circle(x, y - 5, 9, true);
+    ctx.fillStyle = '#fff'; ctx.font = '800 14px system-ui'; ctx.textAlign = 'center'; ctx.fillText('NPC Missão', x, y - 34);
+    ctx.restore();
+  }
+
+  function drawEnemy(e) {
+    if (!e.alive) {
+      ctx.save(); ctx.globalAlpha = .45; ctx.fillStyle = '#ffffff'; ctx.font = '700 12px system-ui'; ctx.textAlign = 'center'; ctx.fillText('renasce ' + Math.ceil(e.respawnIn/1000) + 's', e.x, e.y); ctx.restore(); return;
+    }
+    ctx.save();
+    ctx.shadowBlur = 14; ctx.shadowColor = '#ff5473';
+    ctx.fillStyle = '#ff5473'; circle(e.x, e.y, 23, true);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#2a0710'; circle(e.x - 7, e.y - 5, 4, true); circle(e.x + 7, e.y - 5, 4, true);
+    drawBar(e.x - 28, e.y - 43, 56, 6, e.hp / e.maxHp, '#ff5473');
+    ctx.fillStyle = '#fff'; ctx.font = '700 12px system-ui'; ctx.textAlign = 'center'; ctx.fillText('Lv ' + e.level, e.x, e.y - 50);
+    ctx.restore();
+  }
+
+  function drawPlayer(p) {
+    const fruit = FRUITS.find(f => f.key === p.fruit) || FRUITS[0];
+    ctx.save();
+    if (!p.alive) ctx.globalAlpha = .5;
+    drawAura(p, fruit);
+    if (p.fruit === 'dragon') drawDragonWings(p);
+    if (p.fruit === 'kitsune') drawKitsuneTails(p);
+    if (p.fruit === 'gas' && p.transformed) { ctx.scale(1.22, 1.22); ctx.translate(-p.x*.18, -p.y*.18); }
+    ctx.shadowBlur = p.transformed ? 24 : 12; ctx.shadowColor = fruit.color;
+    ctx.fillStyle = p.color || fruit.color; circle(p.x, p.y, p.transformed ? 31 : 25, true);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#101828'; circle(p.x - 8, p.y - 7, 4, true); circle(p.x + 8, p.y - 7, 4, true);
+    ctx.fillStyle = '#fff'; ctx.font = '800 12px system-ui'; ctx.textAlign = 'center'; ctx.fillText((p.owner ? '👑 ' : '') + p.name, p.x, p.y - 45);
+    drawBar(p.x - 34, p.y - 38, 68, 7, p.hp / p.maxHp, p.id === localId ? '#7cff9e' : '#70e1ff');
+    if (p.mission) { ctx.fillStyle = '#ffd166'; ctx.font = '700 11px system-ui'; ctx.fillText(`${p.mission.kills}/${p.mission.target}`, p.x, p.y + 46); }
+    ctx.restore();
+  }
+
+  function drawAura(p, fruit) {
+    const t = performance.now() * .003;
+    ctx.save(); ctx.globalAlpha = .7; ctx.strokeStyle = fruit.color; ctx.fillStyle = fruit.color;
+    if (p.fruit === 'gas') {
+      for (let i=0;i<7;i++) { const a=t+i*.9; ctx.globalAlpha=.18; circle(p.x+Math.cos(a)*34, p.y+Math.sin(a*1.3)*28, 16, true); }
+    } else if (p.fruit === 'control') {
+      ctx.globalAlpha=.75; for (let i=0;i<5;i++) { const a=t+i*1.4; ctx.save(); ctx.translate(p.x+Math.cos(a)*42,p.y+Math.sin(a)*34); ctx.rotate(a); ctx.strokeRect(-6,-6,12,12); ctx.restore(); }
+    } else if (p.fruit === 'venom') {
+      for (let i=0;i<5;i++) { const a=t+i; ctx.globalAlpha=.28; circle(p.x+Math.cos(a)*30, p.y+Math.sin(a*1.7)*30+10, 6, true); }
+    } else if (p.fruit === 'fenix') {
+      ctx.globalAlpha=.22; ellipse(p.x, p.y, 50, 32, true);
+    } else {
+      ctx.globalAlpha=.16; circle(p.x, p.y, p.transformed ? 58 : 43, true);
+    }
+    ctx.restore();
+  }
+  function drawDragonWings(p) {
+    ctx.save(); ctx.fillStyle = 'rgba(64,255,135,.34)'; ctx.beginPath(); ctx.moveTo(p.x-18,p.y); ctx.lineTo(p.x-72,p.y-44); ctx.lineTo(p.x-50,p.y+18); ctx.fill(); ctx.beginPath(); ctx.moveTo(p.x+18,p.y); ctx.lineTo(p.x+72,p.y-44); ctx.lineTo(p.x+50,p.y+18); ctx.fill(); ctx.restore();
+  }
+  function drawKitsuneTails(p) {
+    ctx.save(); ctx.strokeStyle = 'rgba(113,151,255,.72)'; ctx.lineWidth = 7; ctx.lineCap = 'round'; const count = p.transformed ? 9 : 3; for(let i=0;i<count;i++){ const a = -Math.PI/2 + (i-(count-1)/2)*.22; ctx.beginPath(); ctx.moveTo(p.x, p.y+12); ctx.quadraticCurveTo(p.x+Math.cos(a)*34, p.y+Math.sin(a)*38+22, p.x+Math.cos(a)*66, p.y+Math.sin(a)*72+26); ctx.stroke(); } ctx.restore();
+  }
+
+  function drawProjectile(pr) {
+    ctx.save();
+    const c = kindColor(pr.kind);
+    ctx.shadowBlur = 16; ctx.shadowColor = c; ctx.fillStyle = c; circle(pr.x, pr.y, pr.r || 12, true); ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+  function drawZone(z) {
+    ctx.save();
+    const c = kindColor(z.kind);
+    ctx.globalAlpha = .14; ctx.fillStyle = c; circle(z.x,z.y,z.r,true);
+    ctx.globalAlpha = .38; ctx.strokeStyle = c; ctx.lineWidth = 3; circle(z.x,z.y,z.r,false);
+    ctx.restore();
+  }
+  function drawControlRoom(room) { ctx.save(); ctx.globalAlpha=.18; ctx.fillStyle='#64dcff'; circle(room.x,room.y,room.radius,true); ctx.globalAlpha=.48; ctx.strokeStyle='#64dcff'; ctx.lineWidth=4; circle(room.x,room.y,room.radius,false); ctx.restore(); }
+
+  function kindColor(kind='') {
+    if (kind.includes('gas')) return '#ff5ac8';
+    if (kind.includes('dragon')) return '#ff6b3d';
+    if (kind.includes('control')) return '#64dcff';
+    if (kind.includes('venom')) return '#a647ff';
+    if (kind.includes('kitsune') || kind.includes('blue')) return '#7197ff';
+    if (kind.includes('light')) return '#ffe56a';
+    if (kind.includes('ice')) return '#9ee8ff';
+    if (kind.includes('bomb')) return '#ff7b3a';
+    if (kind.includes('shadow')) return '#6c5cff';
+    if (kind.includes('phoenix')) return '#ff9b46';
+    return '#ffffff';
+  }
+
+  function drawBar(x,y,w,h,ratio,color) { ctx.save(); ctx.fillStyle='rgba(0,0,0,.45)'; roundRect(x,y,w,h,h/2,true); ctx.fillStyle=color; roundRect(x,y,w*Math.max(0,Math.min(1,ratio)),h,h/2,true); ctx.restore(); }
+  function circle(x,y,r,fill) { ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); fill ? ctx.fill() : ctx.stroke(); }
+  function ellipse(x,y,rx,ry,fill) { ctx.beginPath(); ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2); fill ? ctx.fill() : ctx.stroke(); }
+  function roundRect(x,y,w,h,r,fill) { ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); fill ? ctx.fill() : ctx.stroke(); }
+  function norm(x,y) { const l = Math.hypot(x,y) || 1; return { x:x/l, y:y/l }; }
+  function clamp(v,a,b) { return Math.max(a, Math.min(b, v)); }
+  function escapeHtml(s) { return String(s).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+
+  draw();
+})();
+</script>
+</body>
+</html>
