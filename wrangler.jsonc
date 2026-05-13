@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "fruit-seas-online",
+  "name": "fruits-seas",
   "main": "src/worker.js",
   "compatibility_date": "2026-05-12",
   "assets": {
